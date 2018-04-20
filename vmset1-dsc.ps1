@@ -3,99 +3,93 @@ Configuration Main
 
 Param ( [string] $nodeName )
 
-Import-DscResource -ModuleName PSDesiredStateConfiguration
-
 Node $nodeName
   {
-   <# This commented section represents an example configuration that can be updated as required.
-    WindowsFeature WebServerRole
-    {
-      Name = "Web-Server"
-      Ensure = "Present"
-    }
-    WindowsFeature WebManagementConsole
-    {
-      Name = "Web-Mgmt-Console"
-      Ensure = "Present"
-    }
-    WindowsFeature WebManagementService
-    {
-      Name = "Web-Mgmt-Service"
-      Ensure = "Present"
-    }
-    WindowsFeature ASPNet45
-    {
-      Name = "Web-Asp-Net45"
-      Ensure = "Present"
-    }
-    WindowsFeature HTTPRedirection
-    {
-      Name = "Web-Http-Redirect"
-      Ensure = "Present"
-    }
-    WindowsFeature CustomLogging
-    {
-      Name = "Web-Custom-Logging"
-      Ensure = "Present"
-    }
-    WindowsFeature LogginTools
-    {
-      Name = "Web-Log-Libraries"
-      Ensure = "Present"
-    }
-    WindowsFeature RequestMonitor
-    {
-      Name = "Web-Request-Monitor"
-      Ensure = "Present"
-    }
-    WindowsFeature Tracing
-    {
-      Name = "Web-Http-Tracing"
-      Ensure = "Present"
-    }
-    WindowsFeature BasicAuthentication
-    {
-      Name = "Web-Basic-Auth"
-      Ensure = "Present"
-    }
-    WindowsFeature WindowsAuthentication
-    {
-      Name = "Web-Windows-Auth"
-      Ensure = "Present"
-    }
-    WindowsFeature ApplicationInitialization
-    {
-      Name = "Web-AppInit"
-      Ensure = "Present"
-    }
-    Script DownloadWebDeploy
-    {
-        TestScript = {
-            Test-Path "C:\WindowsAzure\WebDeploy_amd64_en-US.msi"
-        }
-        SetScript ={
-            $source = "https://download.microsoft.com/download/0/1/D/01DC28EA-638C-4A22-A57B-4CEF97755C6C/WebDeploy_amd64_en-US.msi"
-            $dest = "C:\WindowsAzure\WebDeploy_amd64_en-US.msi"
-            Invoke-WebRequest $source -OutFile $dest
-        }
-        GetScript = {@{Result = "DownloadWebDeploy"}}
-        DependsOn = "[WindowsFeature]WebServerRole"
-    }
-    Package InstallWebDeploy
-    {
-        Ensure = "Present"  
-        Path  = "C:\WindowsAzure\WebDeploy_amd64_en-US.msi"
-        Name = "Microsoft Web Deploy 3.6"
-        ProductId = "{ED4CC1E5-043E-4157-8452-B5E533FE2BA1}"
-        Arguments = "ADDLOCAL=ALL"
-        DependsOn = "[Script]DownloadWebDeploy"
-    }
-    Service StartWebDeploy
-    {                    
-        Name = "WMSVC"
-        StartupType = "Automatic"
-        State = "Running"
-        DependsOn = "[Package]InstallWebDeploy"
-    } #>
+	Script InstallNetCore
+	{
+		TestScript={
+			return $false
+		}
+		SetScript = {
+
+			Write-Host "About to clear .NET cache from my profile..."
+			$dotnetProfileFolder = "C:\Users\$env:USERNAME\.dotnet"
+
+			If(Test-Path $dotnetProfileFolder){
+				Remove-Item $dotnetProfileFolder\* -recurse
+			}
+
+			Write-Host "Install nuget"
+			Install-PackageProvider -Name "Nuget" -Force
+
+			Write-Host "About to delete existing .NET Core binaries..."
+			$dotNetSdkFolder = "C:\Program Files\dotnet"
+			If(Test-Path $dotNetSdkFolder){
+				Remove-Item $dotNetSdkFolder\* -recurse
+			}
+
+			Write-Host "About to download latest .NET Core 2 binaries..." -ForegroundColor Green
+			$url = "https://download.microsoft.com/download/1/1/5/115B762D-2B41-4AF3-9A63-92D9680B9409/dotnet-sdk-2.1.4-win-x64.zip"
+			$output = "$dotNetSdkFolder\dotnet-dev-win-x64.latest.zip"
+
+			Import-Module BitsTransfer
+			If(!(Test-Path $dotNetSdkFolder)){
+				New-Item -Path $dotNetSdkFolder -ItemType Directory -Force
+			}
+			Start-BitsTransfer -Source $url -Destination $output
+
+			Write-Host "About to unzip latest .NET Core 2 binaries..." -ForegroundColor Green
+			$shell = new-object -com shell.application
+			$zip = $shell.NameSpace($output)
+			foreach($item in $zip.items())
+			{
+				$shell.Namespace($dotNetSdkFolder).copyhere($item)
+			}
+
+			$env:PATH += ";" + $dotNetSdkFolder
+
+			Write-Host "Done - dotnet version installed is:" -ForegroundColor Green
+			dotnet --version
+
+			Write-Host "Deploy PostApi service"
+			$serviceSourseUrl = "https://github.com/dsinelnikov/PostsApi/archive/master.zip"
+			$serviceTemp = "$env:TEMP\api-service1-" + (Get-Random -Minimum 10000000 -Maximum 99999999)
+			$serviceOutput = "C:\www"
+			$serviceZipOutput = $serviceTemp + "\sources.zip"
+
+			If(!(Test-Path $serviceTemp)){
+				New-Item -Path $serviceTemp -ItemType Directory -Force
+			}
+
+			Write-Host "Download posts service sources" -ForegroundColor Green
+			Start-BitsTransfer -Source $serviceSourseUrl -Destination $serviceZipOutput
+
+			$serviceShell = New-Object -com shell.application
+			$serviceZip = $serviceShell.NameSpace($serviceZipOutput)
+
+			Write-Host ("Unpack sources to temp directory '" +  $serviceTemp + "'") -ForegroundColor Green
+			foreach($item in $serviceZip.items()){
+				foreach($subItem in $serviceShell.Namespace($item).items()){		
+					$serviceShell.Namespace($serviceTemp).copyhere($subItem)	
+				}
+			}
+
+			Write-Host "dotnet restore" -ForegroundColor Green
+			Set-Location -Path $serviceTemp
+			dotnet restore
+
+			Write-Host "Publish service" -ForegroundColor Green
+			If(!(Test-Path $serviceOutput)){
+				New-Item -Path $serviceOutput -ItemType Directory -Force
+			}
+			dotnet publish -c Release -o $serviceOutput
+
+			Write-Host "Run service" -ForegroundColor Green
+			Set-Location -Path $serviceOutput
+			$env:ASPNETCORE_URLS="http://*:80"
+			Start-Process -FilePath "dotnet" -ArgumentList "PostsApi.dll"
+		}
+		GetScript = {@{Result = "InstallNetCore"}}
+	}
   }
 }
