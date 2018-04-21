@@ -3,6 +3,8 @@ Configuration Main
 
 Param ( [string] $nodeName )
 
+Import-DscResource -ModuleName xNetworking
+
 Node $nodeName
   {
 	Script InstallNetCore
