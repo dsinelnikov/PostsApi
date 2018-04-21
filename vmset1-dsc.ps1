@@ -91,5 +91,18 @@ Node $nodeName
 		}
 		GetScript = {@{Result = "InstallNetCore"}}
 	}
+	xFirewall ApiFirewallRule
+	{
+		Direction = "Inbound"
+		Name = "ApiFirewallRule"
+		DisplayName = "ApiFirewallRule"
+		Description = "Allow incoming api site traffic."
+		DisplayGroup = "PowerONPlatforms"
+		Enabled = "True"
+		Action = "Allow"
+		Protocol = "TCP"
+		LocalPort = "80"
+		Ensure = "Present"
+	}
   }
 }
