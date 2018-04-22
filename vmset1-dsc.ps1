@@ -84,9 +84,9 @@ Node $nodeName
 			$appSettingsPath = $serviceTemp + '\appsettings.json'
 			$appsettings = Get-Content $appSettingsPath -Raw | ConvertFrom-Json
 
-			$conn = $appsettings.ConnectionStrings.PostsDbConnection -replace '\{server\}', $sqlServerName
-			$conn = $conn -replace '\{login\}', $sqlServerLogin
-			$conn = $conn -replace '\{password\}', $sqlServerPassword
+			$conn = $appsettings.ConnectionStrings.PostsDbConnection -replace '\{server\}', $using:sqlServerName
+			$conn = $conn -replace '\{login\}', $using:sqlServerLogin
+			$conn = $conn -replace '\{password\}', $using:sqlServerPassword
 
 			$appsettings.ConnectionStrings.PostsDbConnection = $conn
 			$appsettings | ConvertTo-Json | Set-Content $appSettingsPath
@@ -94,6 +94,9 @@ Node $nodeName
 			Write-Host "dotnet restore" -ForegroundColor Green
 			Set-Location -Path $serviceTemp
 			dotnet restore
+
+			Write-Host "Migrate database" -ForegroundColor Green
+			dotnet ef database update
 
 			Write-Host "Publish service" -ForegroundColor Green
 			If(!(Test-Path $serviceOutput)){
