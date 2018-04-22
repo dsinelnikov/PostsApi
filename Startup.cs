@@ -29,7 +29,7 @@ namespace PostsApi
             //var connectionString = @"Server=ODP1208023\SQLEXPRESS;Database=Posts;User Id=sa;Password=123456;";
             //var connectionString = "Server=tcp:posts.database.windows.net,1433;Initial Catalog=Posts;Persist Security Info=False;User ID=denis;Password=P@ssw0rd;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;";
             //services.AddDbContext<PostsContext>(opt => opt.UseSqlServer(connectionString));
-            services.AddDbContext<PostsContext>(opt => opt.UseSqlServer(Configuration.GetConnectionString("MyDbConnection")));
+            services.AddDbContext<PostsContext>(opt => opt.UseSqlServer(Configuration.GetConnectionString("PostsDbConnection")));
             services.AddSingleton<ISiteSettings, SiteSettings>();
             services.AddMvc();
         }

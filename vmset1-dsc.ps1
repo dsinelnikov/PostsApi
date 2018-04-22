@@ -84,11 +84,11 @@ Node $nodeName
 			$appSettingsPath = $serviceTemp + '\appsettings.json'
 			$appsettings = Get-Content $appSettingsPath -Raw | ConvertFrom-Json
 
-			$conn = $appsettings.ConnectionStrings.MyDbConnection -replace '\{server\}', $sqlServerName
+			$conn = $appsettings.ConnectionStrings.PostsDbConnection -replace '\{server\}', $sqlServerName
 			$conn = $conn -replace '\{login\}', $sqlServerLogin
 			$conn = $conn -replace '\{password\}', $sqlServerPassword
 
-			$appsettings.ConnectionStrings.MyDbConnection = $conn
+			$appsettings.ConnectionStrings.PostsDbConnection = $conn
 			$appsettings | ConvertTo-Json | Set-Content $appSettingsPath
 
 			Write-Host "dotnet restore" -ForegroundColor Green
