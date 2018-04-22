@@ -81,7 +81,7 @@ Node $nodeName
 
 			Write-Host "Update Sql connection string" -ForegroundColor Green
 
-			$appSettingsPath = $serviceTemp + 'appsettings.json'
+			$appSettingsPath = $serviceTemp + '\appsettings.json'
 			$appsettings = Get-Content $appSettingsPath -Raw | ConvertFrom-Json
 
 			$conn = $appsettings.ConnectionStrings.MyDbConnection -replace '\{server\}', $sqlServerName
