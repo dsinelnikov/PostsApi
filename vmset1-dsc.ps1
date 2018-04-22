@@ -3,8 +3,6 @@ Configuration Main
 
 Param ( [string] $nodeName )
 
-Import-DscResource -ModuleName xNetworking
-
 Node $nodeName
   {
 	Script InstallNetCore
@@ -90,21 +88,10 @@ Node $nodeName
 			Set-Location -Path $serviceOutput
 			$env:ASPNETCORE_URLS="http://*:80"
 			Start-Process -FilePath "dotnet" -ArgumentList "PostsApi.dll"
+
+			netsh advfirewall firewall add rule name="Open Port 80" dir=in action=allow protocol=TCP localport=80
 		}
 		GetScript = {@{Result = "InstallNetCore"}}
-	}
-	xFirewall ApiFirewallRule
-	{
-		Direction = "Inbound"
-		Name = "ApiFirewallRule"
-		DisplayName = "ApiFirewallRule"
-		Description = "Allow incoming api site traffic."
-		DisplayGroup = "PowerONPlatforms"
-		Enabled = "True"
-		Action = "Allow"
-		Protocol = "TCP"
-		LocalPort = "80"
-		Ensure = "Present"
 	}
   }
 }
